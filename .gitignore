@@ -37,3 +37,7 @@ coverage/
 
 # Misc
 .cache/
+
+# Server temp files
+packages/server/tmp/
+

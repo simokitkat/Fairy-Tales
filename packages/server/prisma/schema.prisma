@@ -41,14 +41,18 @@ model Translation {
 }
 
 model Video {
-  id          String    @id @default(cuid())
-  youtubeId   String    @unique
-  channelId   String
-  fairyTaleId String
-  title       String
-  publishedAt DateTime
-  channel     Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  fairyTale   FairyTale @relation(fields: [fairyTaleId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  youtubeId         String    @unique
+  channelId         String
+  fairyTaleId       String?
+  title             String
+  cleanTitle        String
+  publishedAt       DateTime
+  durationSeconds   Int?
+  thumbnailUrl      String?
+  rawPayload        Json?
+  channel           Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  fairyTale         FairyTale? @relation(fields: [fairyTaleId], references: [id], onDelete: SetNull)
 
   @@map("videos")
 }
