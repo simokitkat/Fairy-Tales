@@ -10,6 +10,7 @@ datasource db {
 
 model Channel {
   id                String  @id @default(cuid())
+  handle            String?
   title             String
   language          String
   uploadsPlaylistId String

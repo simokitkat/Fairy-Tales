@@ -28,12 +28,14 @@ export async function ingestChannel(
   await prisma.channel.upsert({
     where: { id: channelId },
     update: {
+      handle,
       title,
       language,
       uploadsPlaylistId,
     },
     create: {
       id: channelId,
+      handle,
       title,
       language,
       uploadsPlaylistId,
