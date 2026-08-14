@@ -9,11 +9,12 @@ datasource db {
 }
 
 model Channel {
-  id                String  @id @default(cuid())
-  handle            String?
+  id                String     @id @default(cuid())
+  handle            String?    @unique
   title             String
   language          String
   uploadsPlaylistId String
+  lastSyncedAt      DateTime?
   videos            Video[]
 
   @@map("channels")
