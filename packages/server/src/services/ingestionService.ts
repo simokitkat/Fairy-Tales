@@ -1,7 +1,5 @@
-import { PrismaClient } from "@prisma/client";
 import { youtube_v3 } from "googleapis";
-
-const prisma = new PrismaClient();
+import prisma from "../lib/prisma";
 
 interface VideoInput {
   youtubeId: string;
@@ -19,9 +17,8 @@ export async function ingestChannel(
   language: string,
   limit = 50,
 ): Promise<{ channel: string; upserted: number }> {
-  const { resolveChannel, getLatestUploads, getFullVideoDetails } = await import(
-    "./youtubeService"
-  );
+  const { resolveChannel, getLatestUploads, getFullVideoDetails } =
+    await import("./youtubeService");
 
   const { channelId, title, uploadsPlaylistId } = await resolveChannel(handle);
 
