@@ -1,6 +1,7 @@
 import { youtube_v3 } from "googleapis";
 import prisma from "../lib/prisma";
 import { CHANNELS } from "../config/channels";
+import { linkAllVideos } from "./matchingService";
 
 interface VideoInput {
   youtubeId: string;
@@ -288,6 +289,10 @@ export async function syncStaleChannels(
   } finally {
     isSyncing = false;
   }
+
+  await linkAllVideos().catch((error) => {
+    console.error("Link after sync failed:", error);
+  });
 }
 
 export async function syncAllChannels(): Promise<void> {

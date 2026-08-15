@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import channelRoutes from "./routes/channelRoutes";
 import videoRoutes from "./routes/videoRoutes";
-import { syncStaleChannels } from "./services/ingestionService";
+import { syncStaleChannels, linkAllVideos } from "./services/ingestionService";
 
 const app = express();
 
@@ -35,6 +35,11 @@ syncStaleChannels().catch((error) => {
   console.error("Initial channel sync failed:", error);
 });
 
+// Startup hook: link existing videos to fairy tales.
+linkAllVideos().catch((error) => {
+  console.error("Initial link failed:", error);
+});
+
 // Cron job: periodically sync stale channels.
 const SYNC_INTERVAL_MS = Number(process.env.SYNC_INTERVAL_MS ?? 86_400_000);
 setInterval(() => {
@@ -42,3 +47,11 @@ setInterval(() => {
     console.error("Scheduled channel sync failed:", error);
   });
 }, SYNC_INTERVAL_MS);
+
+// Cron job: periodically re-link videos.
+const MATCH_INTERVAL_MS = Number(process.env.MATCH_INTERVAL_MS ?? 7_200_000);
+setInterval(() => {
+  linkAllVideos().catch((error) => {
+    console.error("Scheduled link failed:", error);
+  });
+}, MATCH_INTERVAL_MS);

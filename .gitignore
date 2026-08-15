@@ -41,3 +41,5 @@ coverage/
 # Server temp files
 packages/server/tmp/
 
+# Agents Plans
+*/plans

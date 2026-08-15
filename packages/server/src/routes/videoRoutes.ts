@@ -41,7 +41,15 @@ router.get("/:youtubeId", async (req, res, next) => {
   try {
     const video = await prisma.video.findUnique({
       where: { youtubeId: req.params.youtubeId },
-      include: { channel: true },
+      include: {
+        channel: true,
+        fairyTale: {
+          include: {
+            videos: { include: { channel: true } },
+            translations: true,
+          },
+        },
+      },
     });
 
     if (!video) {
