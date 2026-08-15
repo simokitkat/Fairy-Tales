@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { RootLayout } from "@/routes/__root";
 import { LocaleLayout } from "@/routes/$locale";
+import { StoriesPage } from "@/routes/$locale/stories";
 
 const rootRoute = createRootRoute({ component: RootLayout });
 
@@ -24,7 +25,16 @@ const localeRoute = createRoute({
   component: LocaleLayout,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, localeRoute]);
+const localeStoriesRoute = createRoute({
+  getParentRoute: () => localeRoute,
+  path: "stories",
+  component: StoriesPage,
+});
+
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  localeRoute.addChildren([localeStoriesRoute]),
+]);
 
 export const router = createRouter({ routeTree });
 
