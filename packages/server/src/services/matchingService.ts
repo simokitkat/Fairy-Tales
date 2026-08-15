@@ -1,9 +1,11 @@
-import prisma from "../lib/prisma";
+﻿import prisma from "../lib/prisma";
 
 const DEMONYMS: Record<string, string> = {
   en: "English",
   ru: "Russian",
 };
+
+const DURATION_TOLERANCE_SECONDS = 9;
 
 export function extractCanonicalTitle(
   title: string,
@@ -41,6 +43,7 @@ export async function linkVideo(video: {
   title: string;
   cleanTitle: string;
   durationSeconds: number | null;
+  fairyTaleId: string | null;
   thumbnailUrl: string | null;
   channel: { language: string };
 }): Promise<void> {
@@ -50,7 +53,40 @@ export async function linkVideo(video: {
   const slug = slugify(canonical);
 
   try {
-    const fairyTale = await prisma.fairyTale.upsert({
+    const fairyTale = await prisma.fairyTale.findUnique({ where: { slug } });
+
+    if (fairyTale && video.durationSeconds != null) {
+      const siblings = await prisma.video.findMany({
+        where: { fairyTaleId: fairyTale.id, id: { not: video.id } },
+        select: { durationSeconds: true },
+      });
+      const durations = siblings
+        .map((s) => s.durationSeconds)
+        .filter((d): d is number => d !== null);
+
+      if (durations.length > 0) {
+        const min = Math.min(...durations);
+        const max = Math.max(...durations);
+        const withinWindow =
+          video.durationSeconds <= min + DURATION_TOLERANCE_SECONDS &&
+          video.durationSeconds >= max - DURATION_TOLERANCE_SECONDS;
+
+        if (!withinWindow) {
+          console.warn(
+            `Duration outlier in "${slug}" (video ${video.id}): ${video.durationSeconds}s vs siblings ${min}s-${max}s - not linking`,
+          );
+          if (video.fairyTaleId !== null) {
+            await prisma.video.update({
+              where: { id: video.id },
+              data: { fairyTaleId: null },
+            });
+          }
+          return;
+        }
+      }
+    }
+
+    const ft = await prisma.fairyTale.upsert({
       where: { slug },
       create: {
         slug,
@@ -63,12 +99,12 @@ export async function linkVideo(video: {
     await prisma.translation.upsert({
       where: {
         fairyTaleId_language: {
-          fairyTaleId: fairyTale.id,
+          fairyTaleId: ft.id,
           language: video.channel.language,
         },
       },
       create: {
-        fairyTaleId: fairyTale.id,
+        fairyTaleId: ft.id,
         language: video.channel.language,
         title: video.cleanTitle,
       },
@@ -77,25 +113,8 @@ export async function linkVideo(video: {
 
     await prisma.video.update({
       where: { id: video.id },
-      data: { fairyTaleId: fairyTale.id },
+      data: { fairyTaleId: ft.id },
     });
-
-    const siblings = await prisma.video.findMany({
-      where: { fairyTaleId: fairyTale.id },
-      select: { durationSeconds: true },
-    });
-
-    const durations = siblings
-      .map((s) => s.durationSeconds)
-      .filter((d): d is number => d !== null);
-
-    if (durations.length > 1) {
-      const min = Math.min(...durations);
-      const max = Math.max(...durations);
-      if (max - min > 9) {
-        console.warn(`Duration outlier in ${slug}: ${min}s vs ${max}s`);
-      }
-    }
   } catch (error: unknown) {
     const err = error as { code?: string };
     if (err.code === "P2002") {
