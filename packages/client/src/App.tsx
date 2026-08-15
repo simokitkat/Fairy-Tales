@@ -1,6 +1,6 @@
-import { useTranslation } from "react-i18next";
+import { RouterProvider } from "@tanstack/react-router";
+import { router } from "@/router";
 
 export default function App() {
-  const { t } = useTranslation();
-  return <h1 className="text-3xl">{t("appTitle")}</h1>;
+  return <RouterProvider router={router} />;
 }
