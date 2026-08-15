@@ -2,32 +2,38 @@
 
 ## Stack
 - npm workspaces monorepo: `packages/{shared,server,client}`
-- TypeScript strict (`tsconfig.base.json`), each package extends it
-- Server: Express 5 + Prisma 5 (PostgreSQL/Supabase) + Google APIs
+- TypeScript strict (`tsconfig.base.json`: `strict`, `moduleResolution: bundler`, `isolatedModules`); each package extends it
+- Server: Express 5 + Prisma 5 (PostgreSQL/Supabase) + Google APIs (`googleapis`)
 - Shared: Zod schemas only
+- `typescript` is NOT a dependency and there is no `tsc`, lint, or test tooling. `tsx` runs code via esbuild with no type-checking — type errors surface only at runtime. The only npm script is `dev`.
 
-## Commands
-- `cd packages/server && npm run dev` — starts Express on `PORT || 3001` with `tsx watch`
-- `cd packages/server && npx prisma migrate dev` — run migrations against Supabase
-- `cd packages/server && npx prisma studio` — browse DB
-- `cd packages/server && npx tsx src/ingestionService.ts` — one-off ingestion runner (not a real script; see note below)
+## Commands (run from `packages/server`)
+- `npm run dev` — Express on `PORT || 3001` via `tsx watch src/server.ts`
+- `npx prisma generate` — regenerate client after ANY `schema.prisma` change (required for new types)
+- `npx prisma migrate dev` — create/apply a migration (interactive; REFUSES in non-interactive shells — use `npx prisma migrate deploy` to apply already-authored migration SQL)
+- `npx prisma studio` — browse DB
+- `npx tsx src/backfillData.ts` — one-off full backfill of every `CHANNELS` entry (real runnable script; `ingestionService.ts` is a module, NOT runnable on its own)
 
 ## Architecture
-- `packages/server/src/server.ts` — Express entry, mounts `/api/channels` and `/api/videos`
-- `packages/server/src/lib/prisma.ts` — singleton PrismaClient; **all new code must import this**
-- `packages/server/src/services/youtubeService.ts` — YouTube Data API client; loads `packages/server/.env` inline (no `dotenv` package)
-- `packages/server/src/services/ingestionService.ts` — channel/video upsert logic
-- `packages/server/src/config/channels.ts` — typed `CHANNELS` array
-- `packages/shared/src/types.ts` — Zod schemas (`Channel`, `FairyTale`, `Translation`, `Video`)
+- `src/server.ts` — Express entry; mounts `/api/channels`, `/api/videos`; on startup and every `SYNC_INTERVAL_MS` (env, default 24h) calls `syncStaleChannels()`
+- `src/lib/prisma.ts` — singleton `PrismaClient`; **all new code must import this**, never `new PrismaClient()`
+- `src/services/youtubeService.ts` — YouTube Data API client; loads `packages/server/.env` itself via inline `loadEnvFile()` (no `dotenv`); Prisma loads its own env from the same `.env`
+- `src/services/ingestionService.ts` — sync/upsert logic; exports `backfillChannel`, `syncChannel`, `syncStaleChannels(thresholdMs=12h)`, `syncAllChannels`; a module-level `isSyncing` guard blocks overlapping runs
+- `src/config/channels.ts` — typed `CHANNELS` array (source of truth for which channels to sync)
+- `src/backfillData.ts` — script entrypoint (has `main()`), loops `CHANNELS` → `backfillChannel`
+- `packages/shared/src/types.ts` — Zod schemas: `Channel`, `FairyTale`, `Translation`, `Video`
+
+## Sync model (non-obvious)
+- `Channel.handle` is `@unique` (nullable); `Channel.lastSyncedAt` tracks last successful sync
+- `syncStaleChannels` syncs only channels missing/null/older than `thresholdMs` (default 12h); `syncChannel` stops at the first page with no new videos (incremental), while `backfillChannel` pages the entire uploads playlist
+- The server's 24h interval is independent of the 12h staleness threshold
 
 ## Env & DB
-- `packages/server/.env` must contain `DATABASE_URL`, `DIRECT_URL`, and `YOUTUBE_API_KEY`
-- `.env` is gitignored; never overwrite it
-- Schema: `packages/server/prisma/schema.prisma`
-- Migrations: `packages/server/prisma/migrations/`
+- `packages/server/.env` must contain `DATABASE_URL`, `DIRECT_URL`, `YOUTUBE_API_KEY`; gitignored — never overwrite
+- Schema/migrations: `packages/server/prisma/{schema.prisma,migrations/}`
 
 ## Gotchas
-- YouTube env loading is custom inline code in `youtubeService.ts`; do not add `dotenv`
-- No test framework, CI, or README exists
-- `packages/client/` is a placeholder with no code yet
-- `packages/client/` and `packages/server/tmp/` are not part of the runtime; `tmp/` was removed after exploration
+- Do NOT add `dotenv`; env is loaded inline in `youtubeService.ts` and natively by Prisma
+- No README, CI, or test framework exists
+- `packages/client/` is a placeholder (only `package.json`/`tsconfig.json`, no `src`)
+- `packages/server/tmp/` is not part of the runtime (removed after exploration)
