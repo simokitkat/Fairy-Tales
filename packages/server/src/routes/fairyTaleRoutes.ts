@@ -9,14 +9,16 @@ router.get("/", async (req, res, next) => {
       typeof req.query.language === "string" ? req.query.language : undefined;
     const availableIn =
       typeof req.query.availableIn === "string"
-        ? req.query.availableIn
-        : undefined;
+        ? req.query.availableIn.split(",")
+        : Array.isArray(req.query.availableIn)
+          ? req.query.availableIn.map(String)
+          : undefined;
 
     const limit = Math.min(Number(req.query.limit) || 20, 100);
     const offset = Number(req.query.offset) || 0;
 
-    const where = availableIn
-      ? { translations: { some: { language: availableIn } } }
+    const where = availableIn && availableIn.length > 0
+      ? { translations: { some: { language: { in: availableIn } } } }
       : {};
 
     const [tales, total] = await Promise.all([
