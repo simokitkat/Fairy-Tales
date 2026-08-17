@@ -1,0 +1,53 @@
+:root {
+  --color-ink: #111827;
+  --color-atlas: #263B63;
+  --color-periwinkle: #6875E8;
+  --color-saffron: #F2C14E;
+  --color-persimmon: #E76F51;
+  --color-cloud: #F5F7FB;
+  --color-border: #D1D5DB;
+  --color-foreground: #111827;
+  --font-display: "Noto Serif", ui-serif, Georgia, serif;
+  --font-body: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, Menlo, monospace;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+[dir="rtl"] {
+  --margin-start: 0 0 0 1rem;
+  --margin-end: 1rem 0 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  font-family: var(--font-body);
+  color: var(--color-foreground);
+  background-color: var(--color-cloud);
+  line-height: 1.5;
+}
