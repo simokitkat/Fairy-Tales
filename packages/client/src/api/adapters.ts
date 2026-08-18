@@ -1,4 +1,10 @@
-import type { TaleDetail, TaleListItem, Translation, VideoDetail, VideoListItem } from "@fairy-tales/shared";
+import type {
+  TaleDetail,
+  TaleListItem,
+  Translation,
+  VideoDetail,
+  VideoListItem,
+} from "@fairy-tales/shared";
 
 export type { TaleListItem } from "@fairy-tales/shared";
 
@@ -13,15 +19,20 @@ export interface SanitizedTale {
 }
 
 export function selectTaleTitle(tale: TaleDetail, locale: string): string {
-  const translation = tale.translations.find((t) => t.language === locale);
+  const translation = tale.translations?.find((t) => t.language === locale);
   return translation?.title ?? tale.canonicalTitle;
 }
 
 export function selectTaleTranslations(tale: TaleDetail): Translation[] {
-  return [...tale.translations].sort((a, b) => a.language.localeCompare(b.language));
+  return [...tale.translations].sort((a, b) =>
+    a.language.localeCompare(b.language),
+  );
 }
 
-export function sanitizeTaleForClient(tale: TaleDetail, locale: string): SanitizedTale {
+export function sanitizeTaleForClient(
+  tale: TaleDetail,
+  locale: string,
+): SanitizedTale {
   const videos = (tale.videos ?? []) as NonNullable<TaleDetail["videos"]>;
   return {
     slug: tale.slug,
@@ -34,9 +45,7 @@ export function sanitizeTaleForClient(tale: TaleDetail, locale: string): Sanitiz
   };
 }
 
-export function sanitizeVideoForClient(
-  video: VideoListItem
-): {
+export function sanitizeVideoForClient(video: VideoListItem): {
   youtubeId: string;
   title: string;
   cleanTitle: string;
@@ -60,9 +69,7 @@ export function sanitizeVideoForClient(
   };
 }
 
-export function sanitizeVideoDetailForClient(
-  video: VideoDetail
-): {
+export function sanitizeVideoDetailForClient(video: VideoDetail): {
   youtubeId: string;
   title: string;
   cleanTitle: string;
@@ -95,11 +102,14 @@ export function formatDuration(seconds: number | null): string {
   if (seconds === null) return "Unknown duration";
   const minutes = Math.round(seconds / 60);
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(
-    minutes
+    minutes,
   );
 }
 
-export function formatPublishedDate(dateString: string, locale: string): string {
+export function formatPublishedDate(
+  dateString: string,
+  locale: string,
+): string {
   return new Intl.DateTimeFormat(locale, {
     year: "numeric",
     month: "short",
