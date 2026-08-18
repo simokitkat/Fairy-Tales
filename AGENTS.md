@@ -1,39 +1,43 @@
 # AGENTS.md
 
-## Stack
-- npm workspaces monorepo: `packages/{shared,server,client}`
-- TypeScript strict (`tsconfig.base.json`: `strict`, `moduleResolution: bundler`, `isolatedModules`); each package extends it
-- Server: Express 5 + Prisma 5 (PostgreSQL/Supabase) + Google APIs (`googleapis`)
-- Shared: Zod schemas only
-- `typescript` is NOT a dependency and there is no `tsc`, lint, or test tooling. `tsx` runs code via esbuild with no type-checking — type errors surface only at runtime. The only npm script is `dev`.
+## Workspace layout
+- npm/yarn workspaces monorepo: `packages/client`, `packages/server`, `packages/shared`
+- `@fairy-tales/shared` contains Zod schemas + types; imported by both client and server
 
-## Commands (run from `packages/server`)
-- `npm run dev` — Express on `PORT || 3001` via `tsx watch src/server.ts`
-- `npx prisma generate` — regenerate client after ANY `schema.prisma` change (required for new types)
-- `npx prisma migrate dev` — create/apply a migration (interactive; REFUSES in non-interactive shells — use `npx prisma migrate deploy` to apply already-authored migration SQL)
-- `npx prisma studio` — browse DB
-- `npx tsx src/backfillData.ts` — one-off full backfill of every `CHANNELS` entry (real runnable script; `ingestionService.ts` is a module, NOT runnable on its own)
+## Dev servers
+- Start both from repo root:
+  - `cd packages/server && npm run dev` — Express on **3001**
+  - `cd packages/client && npm run dev` — Vite on **3000**, proxies `/api` to 3001
+- No root-level dev script; run packages independently
 
-## Architecture
-- `src/server.ts` — Express entry; mounts `/api/channels`, `/api/videos`; on startup and every `SYNC_INTERVAL_MS` (env, default 24h) calls `syncStaleChannels()`
-- `src/lib/prisma.ts` — singleton `PrismaClient`; **all new code must import this**, never `new PrismaClient()`
-- `src/services/youtubeService.ts` — YouTube Data API client; loads `packages/server/.env` itself via inline `loadEnvFile()` (no `dotenv`); Prisma loads its own env from the same `.env`
-- `src/services/ingestionService.ts` — sync/upsert logic; exports `backfillChannel`, `syncChannel`, `syncStaleChannels(thresholdMs=12h)`, `syncAllChannels`; a module-level `isSyncing` guard blocks overlapping runs
-- `src/config/channels.ts` — typed `CHANNELS` array (source of truth for which channels to sync)
-- `src/backfillData.ts` — script entrypoint (has `main()`), loops `CHANNELS` → `backfillChannel`
-- `packages/shared/src/types.ts` — Zod schemas: `Channel`, `FairyTale`, `Translation`, `Video`
+## Server environment
+- Env loaded manually via `packages/server/src/lib/loadEnv.ts` — reads `packages/server/.env` (gitignored)
+- Required vars: `DATABASE_URL`, `DIRECT_URL`, `YOUTUBE_API_KEY`
+- Optional: `PORT` (default 3001), `SYNC_INTERVAL_MS` (default 86400000), `MATCH_INTERVAL_MS` (default 7200000)
 
-## Sync model (non-obvious)
-- `Channel.handle` is `@unique` (nullable); `Channel.lastSyncedAt` tracks last successful sync
-- `syncStaleChannels` syncs only channels missing/null/older than `thresholdMs` (default 12h); `syncChannel` stops at the first page with no new videos (incremental), while `backfillChannel` pages the entire uploads playlist
-- The server's 24h interval is independent of the 12h staleness threshold
+## Database
+- PostgreSQL via Prisma (`packages/server/prisma/schema.prisma`)
+- Migrations already applied in `packages/server/prisma/migrations/`
+- No `prisma` script in package.json — use `npx prisma ...` from `packages/server`
 
-## Env & DB
-- `packages/server/.env` must contain `DATABASE_URL`, `DIRECT_URL`, `YOUTUBE_API_KEY`; gitignored — never overwrite
-- Schema/migrations: `packages/server/prisma/{schema.prisma,migrations/}`
+## Client commands
+- `npm run build` = `tsc -b && vite build` — **typecheck must pass before build**
+- `npm run typecheck` = `tsc -b`
+- `npm run test` = vitest (jsdom, setup at `src/test/setup.ts`)
+- `npm run test:e2e` = playwright (no config file found)
+- `npm run check:i18n` = validates translation keys via `tsx src/scripts/check-i18n.ts`
 
-## Gotchas
-- Do NOT add `dotenv`; env is loaded inline in `youtubeService.ts` and natively by Prisma
-- No README, CI, or test framework exists
-- `packages/client/` is a placeholder (only `package.json`/`tsconfig.json`, no `src`)
-- `packages/server/tmp/` is not part of the runtime (removed after exploration)
+## Testing
+- Unit tests: vitest in `packages/client`, pattern `src/**/*.test.{ts,tsx}`
+- No server-side tests or build step
+- Test setup mocks `window.matchMedia` and sets `VITE_API_URL`
+
+## i18n
+- Locales are JSON files in `packages/client/src/i18n/locales/` (currently `en.json`, `ru.json`)
+- Loaded dynamically via `import.meta.glob`; `check:i18n` validates keys
+
+## Architecture quirks
+- Server starts **two cron jobs** on boot (channel sync + video linking) and runs startup hooks — expect DB activity on dev start
+- Channel list is hardcoded in `packages/server/src/config/channels.ts` (English + Russian)
+- Video-to-fairy-tale linking uses title parsing + duration tolerance; matching logic in `matchingService.ts`
+- Client path alias: `@` → `./src/*` (configured in `tsconfig.json` and `vite.config.ts`)
