@@ -7,6 +7,7 @@ export interface VideoPlayerData {
   youtubeId: string;
   title: string;
   thumbnailUrl: string | null;
+  embeddable: boolean | null;
   channel: {
     language: string;
     title: string;
@@ -24,14 +25,11 @@ interface SourceVideoPlayersProps {
   title?: string;
 }
 
-// The current Russian source channel has embedding disabled by its video owners.
-const EMBED_DISABLED_LANGUAGES = new Set(["ru"]);
-
 export function YouTubePlayer({ video, locale }: YouTubePlayerProps) {
   const { t } = useI18n();
   const language = getLocaleDisplayName(video.channel.language, locale);
 
-  if (EMBED_DISABLED_LANGUAGES.has(video.channel.language)) {
+  if (video.embeddable === false) {
     const thumbnailUrl =
       video.thumbnailUrl ??
       `https://i.ytimg.com/vi/${encodeURIComponent(video.youtubeId)}/hqdefault.jpg`;
@@ -68,7 +66,7 @@ export function YouTubePlayer({ video, locale }: YouTubePlayerProps) {
         title={t("videos.playerTitle", { title: video.title })}
         className="h-full w-full border-0"
         loading="lazy"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture web-share"
         referrerPolicy="strict-origin-when-cross-origin"
         allowFullScreen
       />

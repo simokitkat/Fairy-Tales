@@ -11,7 +11,8 @@ interface VideoInput {
   publishedAt: Date;
   durationSeconds: number | null;
   thumbnailUrl: string | null;
-  rawPayload: unknown;
+  embeddable: boolean | null;
+  rawPayload: any;
 }
 
 let isSyncing = false;
@@ -83,22 +84,20 @@ export async function backfillChannel(
   let nextPageToken: string | undefined;
 
   while (true) {
-    const page = await fetchUploadsPlaylistPage(uploadsPlaylistId, nextPageToken);
+    const page = await fetchUploadsPlaylistPage(
+      uploadsPlaylistId,
+      nextPageToken,
+    );
     const pageIds = page.videoIds;
 
-    const existingVideos = await prisma.video.findMany({
-      where: { youtubeId: { in: pageIds } },
-      select: { youtubeId: true },
-    });
-    const existingIds = new Set(existingVideos.map((v) => v.youtubeId));
-    const newIds = pageIds.filter((id) => !existingIds.has(id));
-
-    if (newIds.length > 0) {
-      const fullVideos = await getFullVideoDetails(newIds);
+    if (pageIds.length > 0) {
+      const fullVideos = await getFullVideoDetails(pageIds);
       for (const v of fullVideos) {
         const rawTitle = v.snippet?.title ?? "";
         const cleanTitle = rawTitle.split("|")[0].trim();
-        const durationSeconds = parseDuration(v.contentDetails?.duration ?? null);
+        const durationSeconds = parseDuration(
+          v.contentDetails?.duration ?? null,
+        );
         const thumbnailUrl = extractThumbnail(v.snippet?.thumbnails);
 
         const video: VideoInput = {
@@ -109,6 +108,7 @@ export async function backfillChannel(
           publishedAt: new Date(v.snippet?.publishedAt ?? new Date()),
           durationSeconds,
           thumbnailUrl,
+          embeddable: v.status?.embeddable ?? null,
           rawPayload: v,
         };
 
@@ -120,6 +120,7 @@ export async function backfillChannel(
             publishedAt: video.publishedAt,
             durationSeconds: video.durationSeconds,
             thumbnailUrl: video.thumbnailUrl,
+            embeddable: video.embeddable,
             rawPayload: video.rawPayload as never,
           },
           create: {
@@ -183,7 +184,10 @@ export async function syncChannel(
   let nextPageToken: string | undefined;
 
   while (true) {
-    const page = await fetchUploadsPlaylistPage(uploadsPlaylistId, nextPageToken);
+    const page = await fetchUploadsPlaylistPage(
+      uploadsPlaylistId,
+      nextPageToken,
+    );
     const pageIds = page.videoIds;
 
     const existingVideos = await prisma.video.findMany({
@@ -210,6 +214,7 @@ export async function syncChannel(
         publishedAt: new Date(v.snippet?.publishedAt ?? new Date()),
         durationSeconds,
         thumbnailUrl,
+        embeddable: v.status?.embeddable ?? null,
         rawPayload: v,
       };
 
@@ -221,6 +226,7 @@ export async function syncChannel(
           publishedAt: video.publishedAt,
           durationSeconds: video.durationSeconds,
           thumbnailUrl: video.thumbnailUrl,
+          embeddable: video.embeddable,
           rawPayload: video.rawPayload as never,
         },
         create: {

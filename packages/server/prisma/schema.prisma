@@ -9,8 +9,8 @@ datasource db {
 }
 
 model Channel {
-  id                String     @id @default(cuid())
-  handle            String?    @unique
+  id                String    @id @default(cuid())
+  handle            String?   @unique
   title             String
   language          String
   uploadsPlaylistId String
@@ -43,18 +43,19 @@ model Translation {
 }
 
 model Video {
-  id                String    @id @default(cuid())
-  youtubeId         String    @unique
-  channelId         String
-  fairyTaleId       String?
-  title             String
-  cleanTitle        String
-  publishedAt       DateTime
-  durationSeconds   Int?
-  thumbnailUrl      String?
-  rawPayload        Json?
-  channel           Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  fairyTale         FairyTale? @relation(fields: [fairyTaleId], references: [id], onDelete: SetNull)
+  id              String     @id @default(cuid())
+  youtubeId       String     @unique
+  channelId       String
+  fairyTaleId     String?
+  title           String
+  cleanTitle      String
+  publishedAt     DateTime
+  durationSeconds Int?
+  thumbnailUrl    String?
+  embeddable      Boolean?
+  rawPayload      Json?
+  channel         Channel    @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  fairyTale       FairyTale? @relation(fields: [fairyTaleId], references: [id], onDelete: SetNull)
 
   @@map("videos")
 }

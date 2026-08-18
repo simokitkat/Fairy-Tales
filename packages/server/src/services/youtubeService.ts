@@ -43,7 +43,7 @@ export async function getFullVideoDetails(
   videoIds: string[],
 ): Promise<youtube_v3.Schema$Video[]> {
   const videosResponse = await youtube.videos.list({
-    part: ["snippet", "contentDetails", "statistics"],
+    part: ["snippet", "contentDetails", "statistics", "status"],
     id: videoIds,
   });
 

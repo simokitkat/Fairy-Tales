@@ -31,6 +31,7 @@ export const VideoSchema = z.object({
   publishedAt: z.string(),
   durationSeconds: z.number().nullable(),
   thumbnailUrl: z.string().nullable(),
+  embeddable: z.boolean().nullable(),
 });
 
 export type Channel = z.infer<typeof ChannelSchema>;

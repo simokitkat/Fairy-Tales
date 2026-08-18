@@ -52,6 +52,7 @@ export function sanitizeVideoForClient(video: VideoListItem): {
   thumbnailUrl: string | null;
   durationSeconds: number | null;
   publishedAt: string;
+  embeddable: boolean | null;
   channel: { language: string; title: string; handle: string | null };
 } {
   return {
@@ -61,6 +62,7 @@ export function sanitizeVideoForClient(video: VideoListItem): {
     thumbnailUrl: video.thumbnailUrl,
     durationSeconds: video.durationSeconds,
     publishedAt: video.publishedAt,
+    embeddable: video.embeddable,
     channel: {
       language: video.channel.language,
       title: video.channel.title,
@@ -76,6 +78,7 @@ export function sanitizeVideoDetailForClient(video: VideoDetail): {
   thumbnailUrl: string | null;
   durationSeconds: number | null;
   publishedAt: string;
+  embeddable: boolean | null;
   channel: { language: string; title: string; handle: string | null };
   fairyTale?: {
     slug: string;
